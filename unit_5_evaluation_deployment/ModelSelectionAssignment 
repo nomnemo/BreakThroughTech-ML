@@ -1,0 +1,57 @@
+import pandas as pd
+import numpy as np
+import os 
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import accuracy_score, confusion_matrix
+
+# Do not remove or edit the line below:
+filename = os.path.join(os.getcwd(), "data_KNN", "cell2celltrain.csv")
+df = pd.read_csv(filename, header=0)
+
+y = df['Churn']
+X = df.drop(columns=['Churn'], axis=1)
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.10, random_state=1234)
+
+# set up a parameter grid
+num_examples = X_train.shape[0]
+param_grid = {'n_neighbors': list(np.linspace(2, 
+                                              int(np.sqrt(num_examples)), 
+                                              10, 
+                                              dtype=int))}
+
+param_grid
+
+#grid-search cross-valdiation 
+model = KNeighborsClassifier()
+grid = GridSearchCV(model, param_grid, cv=5)
+grid_search = grid.fit(X_train, y_train)
+best_k = grid_search.best_params_['n_neighbors']
+
+model_best = KNeighborsClassifier(n_neighbors=best_k)
+model_best.fit(X_train, y_train)
+probability_predictions = model_best.predict_proba(X_test)[:, 1]
+class_label_predictions = model_best.predict(X_test)
+
+accuracy = accuracy_score(y_test, class_label_predictions)
+print(f'Accuracy Score: {accuracy}')
+confusion_matrix = confusion_matrix(y_test, class_label_predictions)
+print(confusion_matrix)
+
+
+# plot precision-recall curve 
+from sklearn.metrics import precision_recall_curve
+precision, recall, thresholds = precision_recall_curve(y_test, probability_predictions)
+fig = plt.figure()
+ax = fig.add_subplot(111)
+
+sns.lineplot(x=recall, y=precision, marker = 'o')
+
+plt.title("Precision-recall curve")
+plt.xlabel("Recall")
+plt.ylabel("Precision")
+plt.show()
